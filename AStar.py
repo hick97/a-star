@@ -60,10 +60,11 @@ class AStar:
                 accumulated_dist += accumulated_dist_local
 
             print('Local cost was: ' + str(best_fitness))
-            self.final_cost += best_fitness
             self.route.append(node_to_be_visited)
 
             print('Im going to node: ' + str(current_node))
+
+        self.final_cost = best_fitness
 
     def checkNeighbors(self, node):
         neighbors = []
