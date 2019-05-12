@@ -1,20 +1,21 @@
 import numpy as np
+from math import inf
 import sys
 import re
 
 IS_NEIGHBOR = 1
 
-
 class AStar:
-    def __init__(self, distanceMatrix, adjacencyMatrix, initialPoint, endPoint):
+    def __init__(self, names, distanceMatrix, adjacencyMatrix, initialPoint, endPoint):
         self.distanceMatrix = distanceMatrix
-        self. adjacencyMatrix = adjacencyMatrix
+        self.names = names
+        self.adjacencyMatrix = adjacencyMatrix
         self.initialNode = initialPoint
         self.endNode = endPoint
         self.route = []
         self.final_cost = 0
 
-        self.route.append(initialPoint)
+        self.route.append(vertices_names[initialPoint])
 
         self.execution()
 
@@ -29,96 +30,71 @@ class AStar:
         accumulated_dist = 0
 
         while(current_node != self.endNode):
-            print('Current node: ' + str(current_node))
+            print('Current node: ' + vertices_names[current_node])
 
-            current_neighbors = self.checkNeighbors(current_node)
-            initial_fitness = self.fitness(
-                current_neighbors[0], accumulated_dist)
-            initial_d0 = initial_fitness[1]
-            best_fitness = initial_fitness[0]
-
-            better_than_initial = False
+            search_border = self.checkBorder(current_node)
+            best_cost = inf
             accumulated_dist_local = 0
             node_to_be_visited = 0
 
-            for index, value in enumerate(current_neighbors):
-                if index != 0:
-                    f_result = self.fitness(value, accumulated_dist)
+            for node in search_border:
+                cost = self.cost(current_node, node, accumulated_dist)
 
-                    if(f_result[0] <= best_fitness):
-                        best_fitness = f_result[0]
-                        accumulated_dist_local = f_result[1]
-                        current_node = value
-                        better_than_initial = True
-                        node_to_be_visited = value
+                if(cost[0] <= best_cost):
+                    best_cost = cost[0]
+                    accumulated_dist_local = cost[1]
+                    node_to_be_visited = node
 
-            if(not better_than_initial):
-                accumulated_dist += initial_d0
-                current_node = current_neighbors[0]
-                node_to_be_visited = current_neighbors[0]
-            else:
-                accumulated_dist += accumulated_dist_local
+            accumulated_dist += accumulated_dist_local
+            current_node = node_to_be_visited
 
-            print('Local cost was: ' + str(best_fitness))
-            self.route.append(node_to_be_visited)
+            print('Im going to node: ' + vertices_names[current_node])
+            print('Local cost was: ' + str(best_cost))
+            self.route.append(vertices_names[current_node])
 
-            print('Im going to node: ' + str(current_node))
+        self.final_cost = best_cost
 
-        self.final_cost = best_fitness
-
-    def checkNeighbors(self, node):
-        neighbors = []
+    def checkBorder(self, node):
+        border = []
         for index, value in enumerate(self.adjacencyMatrix[node]):
-            if(int(value) == IS_NEIGHBOR):
-                neighbors.append(index)
-        return neighbors
+            if value == IS_NEIGHBOR:
+                border.append(index)
+        return border
 
-    def fitness(self, current_node, accumulated_dist=0):
+    def cost(self, current_node, next_node, accumulated_dist=0):
+        g_n = accumulated_dist + self.distanceMatrix[current_node][next_node]
+        h_n = self.distanceMatrix[self.endNode][next_node]
+        f_n = g_n + h_n
 
-        d0_n = accumulated_dist + \
-            int(self.distanceMatrix[self.initialNode][current_node])
-        h_n = int(self.distanceMatrix[self.endNode][current_node])
-
-        f_node = int(d0_n + h_n)
-
-        return f_node, d0_n
+        return f_n, g_n
 
 
 if __name__ == '__main__':
-
-    if len(sys.argv) != 3:
-        print('Usage: python AStar.py distmatrix.txt adjmatrix.txt')
+    if len(sys.argv) != 4:
+        print('Usage: python AStar.py <graph_data> <start> <end>')
         sys.exit(1)
 
     matrix_dist = []
     matrix_adj = []
     matrix_length = 0
 
-    file = open(sys.argv[1], 'r')
-    text = file.readlines()
-    for index, line in enumerate(text):
-        if(index == 0):
-            matrix_length = re.sub('[^0-9]', '', line)
-        else:
-            new_line = re.sub('\n', '', line)
-            dist = re.split(' ', new_line)
+    with open(sys.argv[1], 'r') as file:
+        text = file.readlines()
+        vertices_count = int(text[0])
+        vertices_names = text[1].split()
+
+        start = vertices_names.index(sys.argv[2])
+        end = vertices_names.index(sys.argv[3])
+
+        for index, line in enumerate(text[2:2+vertices_count]):
+            adj = [int(a) for a in re.split(' ', line)]
+            matrix_adj.append(adj)
+
+        for index, line in enumerate(text[2+vertices_count:]):
+            dist = [int(d) for d in re.split(' ', line)]
             matrix_dist.append(dist)
 
-    file = open(sys.argv[2], 'r')
-    text = file.readlines()
-    for index, line in enumerate(text):
-        if(index != 0):
-            new_line = re.sub('\n', '', line)
-            dist = re.split(' ', new_line)
-            matrix_adj.append(dist)
+        search = AStar(vertices_names, matrix_dist, matrix_adj, start, end)
 
-    SearchOne = AStar(matrix_dist, matrix_adj, 0, 5)
-
-    print('Final cost: ' + str(SearchOne.getFinalCost()))
-    print('Route: ' + str(SearchOne.getRoute()))
-    print('\n\n')
-
-    SearchTwo = AStar(matrix_dist, matrix_adj, 1, 4)
-
-    print('Final cost: ' + str(SearchTwo.getFinalCost()))
-    print('Route: ' + str(SearchTwo.getRoute()))
+        print('Final cost: ' + str(search.getFinalCost()))
+        print('Route: ' + str(search.getRoute()))
